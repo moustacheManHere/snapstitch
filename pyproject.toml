@@ -1,0 +1,19 @@
+[project]
+name = "snapstitch"
+version = "0.1.0"
+description = "An open-source python library to generate synthetic datasets for computer vision tasks"
+authors = [
+    {name = "ram", email = "justforthegreatergood@gmail.com"},
+]
+dependencies = []
+requires-python = ">=3.8"
+readme = "README.md"
+license = {text = "MIT"}
+
+[build-system]
+requires = ["pdm-backend"]
+build-backend = "pdm.backend"
+
+
+[tool.pdm]
+distribution = true
