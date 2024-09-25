@@ -5,7 +5,10 @@ description = "An open-source python library to generate synthetic datasets for 
 authors = [
     {name = "ram", email = "justforthegreatergood@gmail.com"},
 ]
-dependencies = []
+dependencies = [
+    "numpy>=1.24.4",
+    "opencv-python>=4.8.1.78",
+]
 requires-python = ">=3.8"
 readme = "README.md"
 license = {text = "MIT"}
@@ -17,3 +20,12 @@ build-backend = "pdm.backend"
 
 [tool.pdm]
 distribution = true
+
+[tool.pdm.dev-dependencies]
+dev = [
+    "flake8>=5.0.4",
+]
+
+[tool.flake8]
+max-line-length = 88
+exclude = ["__pycache__", ".git", "build", "dist"]
