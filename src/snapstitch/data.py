@@ -61,13 +61,21 @@ class DataLoaderCache:
             logging.error("Error: {}".format(e))
             return None
 
+        # Resize the image
+        image = self._resize_image(image)
+        if image is None:
+            logging.error("Error resizing image: {}".format(image_path))
+            return None
+
+        return image
+
+    # Making this a separate function to overidde in the PartsLoader class
+    def _resize_image(self, image: np.ndarray) -> Optional[np.ndarray]:
         try:
             image = cv2.resize(image, self.target_size)
         except Exception as e:
-            logging.error("Error resizing image: {}".format(image_path))
             logging.error("Error: {}".format(e))
             return None
-
         return image
 
     def _cache_image(self, file_path: str, image) -> None:
@@ -109,3 +117,56 @@ class DataLoaderCache:
                 images.append(image)
 
         return images
+
+
+# Background Loader
+class BackgroundLoader(DataLoaderCache):
+    def __init__(
+        self, image_dir: str, target_size: ImageSize, max_cache_size: int = 20
+    ) -> None:
+        super().__init__(image_dir, target_size, max_cache_size)
+
+
+# Parts Loader
+class PartsLoader(DataLoaderCache):
+    def __init__(
+        self,
+        image_directory: str,
+        target_size: ImageSize,
+        scale: float,
+        max_cache_size: int = 20,
+    ) -> None:
+        super().__init__(image_directory, target_size, max_cache_size)
+        self.scale = scale
+
+    def _resize_image(self, image: np.ndarray) -> Optional[np.ndarray]:
+        """
+        Target size will be something like [300,300]
+        but we need to account for the aspect ratio of parts.
+        So I will override this function.
+
+        Also we need to scale the parts by the scale factor for that class.
+        """
+
+        height, width = image.shape[:2]
+        aspect_ratio = width / height
+
+        target_width, target_height = self.target_size
+
+        if aspect_ratio > target_width / target_height:
+            # Resize based on width
+            new_width = target_width
+            new_height = int(new_width / aspect_ratio)
+        else:
+            # Resize based on height
+            new_height = target_height
+            new_width = int(new_height * aspect_ratio)
+
+        try:
+            image = cv2.resize(
+                image, (new_width, new_height), interpolation=cv2.INTER_AREA
+            )
+        except Exception as e:
+            logging.error("Error: {}".format(e))
+            return None
+        return image
