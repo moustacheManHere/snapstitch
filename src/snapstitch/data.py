@@ -43,13 +43,11 @@ class DataLoaderCache:
 
     def _get_backgrounds_from_directory(self, directory_path: str) -> None:
         # Create a pattern to match all supported formats in subdirectories
-        pattern = os.path.join(
-            directory_path, "**/*." + "{" + ",".join(SUPPORTED_FORMATS) + "}"
-        )
+        for ext in SUPPORTED_FORMATS:
+            pattern = os.path.join(directory_path, "**", f"*.{ext}")
+            self.images.extend(glob.glob(pattern, recursive=True))
 
-        # Use glob with recursive=True to find all images in subdirectories
-        for file_path in glob.glob(pattern, recursive=True):
-            self.images.append(file_path)
+        return
 
     def _load_image(self, image_path: str) -> Optional[np.ndarray]:
         try:
@@ -108,7 +106,7 @@ class DataLoaderCache:
 
         return image
 
-    def get_random_images(self, num_images: int) -> List[np.ndarray]:
+    def get_random_images(self, num_images: int = 1) -> List[np.ndarray]:
         images = []
 
         while len(images) < num_images:
@@ -122,7 +120,10 @@ class DataLoaderCache:
 # Background Loader
 class BackgroundLoader(DataLoaderCache):
     def __init__(
-        self, image_dir: str, target_size: ImageSize, max_cache_size: int = 20
+        self,
+        image_dir: str,
+        target_size: ImageSize = (2560, 1440),
+        max_cache_size: int = 20,
     ) -> None:
         super().__init__(image_dir, target_size, max_cache_size)
 
@@ -132,12 +133,13 @@ class PartsLoader(DataLoaderCache):
     def __init__(
         self,
         image_directory: str,
-        target_size: ImageSize,
-        scale: float,
+        target_size: ImageSize = (400, 400),
+        scale: float = 1,
         max_cache_size: int = 20,
     ) -> None:
-        super().__init__(image_directory, target_size, max_cache_size)
         self.scale = scale
+        target_size = (int(target_size[0] * scale), int(target_size[1] * scale))
+        super().__init__(image_directory, target_size, max_cache_size)
 
     def _resize_image(self, image: np.ndarray) -> Optional[np.ndarray]:
         """

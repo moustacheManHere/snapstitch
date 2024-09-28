@@ -37,26 +37,26 @@ pdm install
 The library is envisioned to be used in this way.
 
 ```python
-from snapstitch import Stitcher, PartsList, BackgroundList, YOLOv8Generator
+from snapstitch import Stitcher, PartsLoader, BackgroundLoader, YOLOv8Generator
 
 # Initialise path to backgrounds
-background = BackgroundList("path/to/your/background")
+background = BackgroundLoader("examples/supermarket/background")
 
 # Initialise all your classes
-parts_resistor = PartsList("path/to/your/images1", "resistor")
-parts_capacitor = PartsList("path/to/your/images2", "capacitor")
-parts_processor = PartsList("path/to/your/images3", "processor")
+bread = PartsLoader("examples/supermarket/parts/bread")
+canned_beans = PartsLoader("examples/supermarket/parts/canned_beans")
+jam = PartsLoader("examples/supermarket/parts/jam")
 
 # Generate YOLOv8 data 
 generator = YOLOv8Generator()
 
 # Main class that handles generation
-stitcher = Stitcher(background, [parts_resistor, parts_capacitor, parts_processor], generator)
+stitcher = Stitcher(generator, background, {"bread": bread, "canned_beans": canned_beans, "jam":jam}, 30, ["bread", "canned_beans", "jam"])
 
 # Generate as many times as needed
-stitcher.execute(200, "path/to/your/output")
-stitcher.execute(100, "path/to/your/output2")
-stitcher.execute(500, "path/to/your/output")
+stitcher.execute(10, "examples/supermarket/output", "train_data1")
+stitcher.execute(10, "examples/supermarket/output", "train_data2")
+stitcher.execute(10, "examples/supermarket/output", "train_data3")
 
 ```
 
