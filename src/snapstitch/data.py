@@ -38,6 +38,7 @@ class DataLoaderCache:
                 "No images found in the directory: {}".format(image_directory)
             )
 
+        self.images = list(set(self.images))  # Remove duplicates if any
         # Initialize the target size
         self.target_size = target_size
 
