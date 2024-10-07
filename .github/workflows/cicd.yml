@@ -51,7 +51,7 @@ jobs:
 
       - name: Publish to Test PyPI
         run: |
-          pdm publish --repository test-pypi --username ${{ secrets.TEST_PYPI_USERNAME }} --password ${{ secrets.TEST_PYPI_PASSWORD }}
+          pdm publish --repository test-pypi --username ${{ secrets.TEST_PYPI_USERNAME }} --password ${{ secrets.TEST_PYPI_PASSWORD }} --repository https://test.pypi.org/legacy/
 
   publish-pypi:
     name: Publish to PyPI
@@ -72,4 +72,4 @@ jobs:
 
       - name: Publish to PyPI
         run: |
-          pdm publish --username ${{ secrets.PYPI_USERNAME }} --password ${{ secrets.PYPI_PASSWORD }}
+          pdm publish --username ${{ secrets.PYPI_USERNAME }} --password ${{ secrets.PYPI_PASSWORD }} --repository https://test.pypi.org/legacy/ --repository https://upload.pypi.org/legacy/
