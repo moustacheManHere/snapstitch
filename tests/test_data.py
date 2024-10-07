@@ -1,4 +1,4 @@
-from snapstitch.data import DataLoaderCache, SUPPORTED_FORMATS
+from snapstitch.data import DataLoaderCache, PartsLoader, SUPPORTED_FORMATS
 import numpy as np
 
 
@@ -58,3 +58,40 @@ def test_dataloadercache_functionality(mocker):
     assert type(random_images[0]) == np.ndarray, "Expected image to be a numpy array"
     assert random_images[0].shape == (100, 100, 3), "Expected image to be resized"
     assert len(loader.cache) <= 2, "Expected 2 images to be cached"
+
+
+def test_partsloader_resize_image(mocker):
+    # Mock the cv2.imread function to return a dummy image that is not square
+    mocker.patch("cv2.imread", return_value=np.zeros((200, 300, 3), dtype=np.uint8))
+    mocker.patch(
+        "glob.glob",
+        return_value=[
+            "mock_dir/image1.jpg",
+            "mock_dir/image2.jpg",
+            "mock_dir/image3.jpg",
+        ],
+    )
+
+    loader = PartsLoader(
+        image_directory="mock_dir", target_size=(100, 100), scale=0.5, max_cache_size=20
+    )
+
+    random_images = loader.get_random_images(1)
+
+    # By right this should resize while maintaining the aspect ratio
+    original_height, original_width = 200, 300
+    target_height, target_width = int(100 * 0.5), int(100 * 0.5)  # scale factor 0.5
+    aspect_ratio = original_width / original_height
+
+    if aspect_ratio > 1:  # Image is wider than tall
+        expected_width = target_width
+        expected_height = int(expected_width / aspect_ratio)
+    else:  # Image is taller than wide or square
+        expected_height = target_height
+        expected_width = int(expected_height * aspect_ratio)
+
+    assert random_images[0].shape == (
+        expected_height,
+        expected_width,
+        3,
+    ), f"Expected image to be resized to {(expected_height, expected_width)}, but got {random_images[0].shape}"
