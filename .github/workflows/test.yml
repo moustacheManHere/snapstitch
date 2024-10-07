@@ -27,7 +27,7 @@ jobs:
           pdm sync -d -G dev
       - name: Run Linting
         run: |
-          pdm run flake8 .
+          pdm run flake8 src
       - name: Run Tests
         run: |
           pdm run pytest .
