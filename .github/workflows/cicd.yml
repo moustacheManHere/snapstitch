@@ -1,0 +1,75 @@
+name: Testing
+
+on:
+  push:
+    branches:
+      - 'main'
+      - 'develop'
+
+jobs:
+  test:
+    name: Test on ${{ matrix.os }} with Python ${{ matrix.python-version }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        python-version: [3.8, 3.9, '3.10', '3.11']
+        os: [ubuntu-latest, macOS-latest, windows-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up PDM
+        uses: pdm-project/setup-pdm@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: |
+          pdm sync -d -G dev
+      - name: Run Linting
+        run: |
+          pdm run flake8 src
+      - name: Run Tests
+        run: |
+          pdm run pytest .
+
+  publish-test-pypi:
+    name: Publish to Test PyPI
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.ref == 'refs/heads/develop'
+    environment: staging  # Environment set at the job level
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up PDM
+        uses: pdm-project/setup-pdm@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pdm sync -d -G dev
+
+      - name: Publish to Test PyPI
+        run: |
+          pdm publish --repository test-pypi --username ${{ secrets.TEST_PYPI_USERNAME }} --password ${{ secrets.TEST_PYPI_PASSWORD }} --repository https://test.pypi.org/legacy/
+
+  publish-pypi:
+    name: Publish to PyPI
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.ref == 'refs/heads/main'
+    environment: release  # Environment set at the job level
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up PDM
+        uses: pdm-project/setup-pdm@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pdm sync -d -G dev
+
+      - name: Publish to PyPI
+        run: |
+          pdm publish --username ${{ secrets.PYPI_USERNAME }} --password ${{ secrets.PYPI_PASSWORD }} --repository https://test.pypi.org/legacy/ --repository https://upload.pypi.org/legacy/
