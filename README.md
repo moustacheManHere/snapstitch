@@ -65,25 +65,71 @@ You can use the following code to generate a synthetic YOLO dataset:
 
 ```python
 from snapstitch import Stitcher, PartsLoader, BackgroundLoader, YOLOv8Generator
+import albumentations as A
 
-# Initialise path to backgrounds
+# Define transformations
+transform = A.Compose([
+    A.Rotate(limit=(-10, 5), p=1.0),
+    A.HorizontalFlip(p=0.5),
+    A.VerticalFlip(p=0.5),
+])
+
+# Load backgrounds
 background = BackgroundLoader("supermarket_dataset/background")
 
-# Initialise all your classes
-bread = PartsLoader("supermarket_dataset/parts/bread")
-canned_beans = PartsLoader("supermarket_dataset/parts/canned_beans")
-jam = PartsLoader("supermarket_dataset/parts/jam")
+# Load parts for each class with transformations
+bread = PartsLoader(
+    "supermarket_dataset/parts/bread", 
+    scale=0.3, # Scale to apply on image
+    transform=transform, # Augmentation Function
+    scaling_variation=0.2 # Random variations to the scale
+)
+canned_beans = PartsLoader(
+    "supermarket_dataset/parts/canned_beans", 
+    scale=0.3,
+    transform=transform, 
+    scaling_variation=0.2
+)
+jam = PartsLoader(
+    "supermarket_dataset/parts/jam", 
+    scale=0.3,
+    transform=transform, 
+    scaling_variation=0.2
+)
+negative_samples = PartsLoader(
+    "supermarket_dataset/parts/negative", 
+    scale=0.3,
+    transform=transform, 
+    scaling_variation=0.2
+)
 
-# Generate YOLOv8 data 
+# Initialize YOLOv8 generator
 generator = YOLOv8Generator()
 
-# Main class that handles generation
-stitcher = Stitcher(generator, background, {"bread": bread, "canned_beans": canned_beans, "jam":jam}, 30, ["bread", "canned_beans", "jam"])
+# Define Stitcher with class proportions
+stitcher = Stitcher(
+    generator, 
+    background, 
+    {
+        "bread": [bread, 0.3], 
+        "canned_beans": [canned_beans, 0.3], 
+        "jam": [jam, 0.3], 
+        "_": [negative_samples, 0.1]  # "_" for negative mining
+    }, 
+    image_size=30
+)
 
-# Generate as many times as needed
-stitcher.execute(10, "supermarket_dataset/output", "train_data1")
-stitcher.execute(10, "supermarket_dataset/output", "train_data2")
-stitcher.execute(10, "supermarket_dataset/output", "train_data3")
+# Generate datasets
+stitcher.execute(10, "supermarket_dataset/output", "train_data1", train_or_val=True)  # Training data
+stitcher.execute(10, "supermarket_dataset/output", "train_data2", train_or_val=False)  # Validation data
+stitcher.execute(
+    10, 
+    "supermarket_dataset/output", 
+    "train_data3", 
+    train_or_val=True,
+    perimeter_start=(100, 100), 
+    perimeter_end=(2460, 1340)  # Custom stitching perimeter
+)
 ```
 
 For a YOLOv8 Generator, the output will be organized as follows:
