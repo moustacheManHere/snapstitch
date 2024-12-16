@@ -20,7 +20,7 @@ ImageSize = Tuple[int, int]
 # Base Data Class
 class DataLoaderCache:
     def __init__(
-        self, image_directory: str, target_size: ImageSize, max_cache_size: 20
+        self, image_directory: str, target_size: ImageSize, max_cache_size: 20, transform=None
     ) -> None:
 
         # Initialize the cache to store frequently used images
@@ -41,6 +41,7 @@ class DataLoaderCache:
         self.images = list(set(self.images))  # Remove duplicates if any
         # Initialize the target size
         self.target_size = target_size
+        self.transform = transform
 
     def _get_backgrounds_from_directory(self, directory_path: str) -> None:
         # Create a pattern to match all supported formats in subdirectories
@@ -53,12 +54,16 @@ class DataLoaderCache:
     def _load_image(self, image_path: str) -> Optional[np.ndarray]:
         try:
             # Load the image using OpenCV
-            image = cv2.imread(image_path)
+            image = cv2.imread(image_path, cv2.IMREAD_UNCHANGED)
         except Exception as e:
             self.images.remove(image_path)
             logging.error("Error loading image: {}".format(image_path))
             logging.error("Error: {}".format(e))
             return None
+
+        # Apply augmentation
+        if self.transform:
+            image = self.transform(image=image)["image"]
 
         # Resize the image
         image = self._resize_image(image)
@@ -125,8 +130,9 @@ class BackgroundLoader(DataLoaderCache):
         image_dir: str,
         target_size: ImageSize = (2560, 1440),
         max_cache_size: int = 20,
+        transform=None
     ) -> None:
-        super().__init__(image_dir, target_size, max_cache_size)
+        super().__init__(image_dir, target_size, max_cache_size, transform=transform)
 
 
 # Parts Loader
@@ -137,10 +143,13 @@ class PartsLoader(DataLoaderCache):
         target_size: ImageSize = (400, 400),
         scale: float = 1,
         max_cache_size: int = 20,
+        transform=None,
+        scaling_variation: float = 0.2,
     ) -> None:
         self.scale = scale
+        self.scaling_variation = scaling_variation
         target_size = (int(target_size[0] * scale), int(target_size[1] * scale))
-        super().__init__(image_directory, target_size, max_cache_size)
+        super().__init__(image_directory, target_size, max_cache_size, transform=transform)
 
     def _resize_image(self, image: np.ndarray) -> Optional[np.ndarray]:
         """
@@ -154,7 +163,12 @@ class PartsLoader(DataLoaderCache):
         height, width = image.shape[:2]
         aspect_ratio = width / height
 
-        target_width, target_height = self.target_size
+        # Apply random variation to target size
+        variation_x = 1 + random.uniform(-self.scaling_variation, self.scaling_variation)
+        variation_y = 1 + random.uniform(-self.scaling_variation, self.scaling_variation)
+
+        target_width = max(50, int(self.target_size[0] * variation_x))  # Ensure > 0
+        target_height = max(50, int(self.target_size[1] * variation_y))  # Ensure > 0
 
         if aspect_ratio > target_width / target_height:
             # Resize based on width
