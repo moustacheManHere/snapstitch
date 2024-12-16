@@ -41,6 +41,8 @@ class YOLOv8Generator(Generator):
         output_dir: str,
         image_name: str,
         train_or_val: bool,  # True for train, False for val
+        perimeter_start: Tuple[int, int] = (0, 0),
+        perimeter_end: Tuple[int, int] = (2560, 1440)
     ) -> bool:  # Return indicates success or failure
 
         # join the image dir, train/val, and image name
@@ -66,7 +68,7 @@ class YOLOv8Generator(Generator):
         for part, class_id in zip(parts, classes):
             part_size = part.shape[:2]
             new_position = self._get_new_part_position(
-                current_positions, part_size, background_copy.shape[:2]
+                current_positions, part_size, background_copy.shape[:2], perimeter_start=perimeter_start, perimeter_end=perimeter_end
             )
 
             if new_position is None:
@@ -100,14 +102,23 @@ class YOLOv8Generator(Generator):
         current_positions: List[PartPlacement],
         part_size: Coordinates,
         background_size: Coordinates,
+        perimeter_start: Tuple[int, int] = (0, 0),
+        perimeter_end: Tuple[int, int] = (2560, 1440)
     ) -> Optional[Coordinates]:
         max_attempts = 10
+
+        start_x, start_y = max(0, perimeter_start[0]), max(0, perimeter_start[1])
+        end_x = min(background_size[1], perimeter_end[0])
+        end_y = min(background_size[0], perimeter_end[1])
+
+        if end_x - start_x < part_size[1] or end_y - start_y < part_size[0]:
+            raise ValueError("Perimeter is too small to fit the part.")
 
         # try to find a random position that doesn't overlap
         for i in range(max_attempts):
             # x,y refers to the top left coordinate of the part, not center
-            random_x = random.randint(0, background_size[1] - part_size[1])
-            random_y = random.randint(0, background_size[0] - part_size[0])
+            random_x = random.randint(start_x, end_x - part_size[1])
+            random_y = random.randint(start_y, end_y - part_size[0])
 
             # Coordinates of the new part (top-left and bottom-right)
             new_x1, new_y1 = random_x, random_y  # top-left corner
@@ -148,6 +159,7 @@ class YOLOv8Generator(Generator):
     def _place_part(
         self, background: np.ndarray, part: np.ndarray, position: PartPlacement
     ) -> np.ndarray:
+        background = background[:, :, :3]  # Remove the alpha channel if it exists
         part_width, part_height = part.shape[1], part.shape[0]
         background_width, background_height = background.shape[1], background.shape[0]
 
@@ -196,6 +208,9 @@ class YOLOv8Generator(Generator):
             x1, y1 = position[0]
             x2, y2 = position[1]
             class_id = position[2]
+
+            if class_id == -1:
+                continue
 
             x_center = (x1 + x2) / 2 / background_size[0]
             y_center = (y1 + y2) / 2 / background_size[1]
