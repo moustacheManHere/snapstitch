@@ -116,7 +116,7 @@ stitcher = Stitcher(
         "jam": [jam, 0.3], 
         "_": [negative_samples, 0.1]  # "_" for negative mining
     }, 
-    image_size=30
+    parts_per_image=30
 )
 
 # Generate datasets
